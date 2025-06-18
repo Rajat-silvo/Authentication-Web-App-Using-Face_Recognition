@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register as a New User</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            padding: 20px;
+        }
+        video {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            width: 40%;
+            margin: 20px auto;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            width: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Register New User</h1>
+        <video id="video" autoplay></video>
+        <br>
+        <input type="text" id="username" placeholder="Enter username">
+        <button id="acceptBtn">Accept</button>
+        <button id="goBackBtn">Go Back</button>
+        <br>
+        <button id="logBtn">Download Log</button>
+        <div id="message" class="message"></div>
+    </div>
+    <script>
+        const video = document.getElementById('video');
+        const usernameInput = document.getElementById('username');
+        const acceptBtn = document.getElementById('acceptBtn');
+        const goBackBtn = document.getElementById('goBackBtn');
+        const logBtn = document.getElementById('logBtn');
+        const messageDiv = document.getElementById('message');
+
+        // Access user's webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accessing webcam: ", err);
+                messageDiv.textContent = "Unable to access the webcam.";
+            });
+
+        // Accept button functionality
+        acceptBtn.addEventListener('click', () => {
+            const username = usernameInput.value.trim();
+            if (!username ) {
+                messageDiv.textContent = "Username cannot be empty.";
+                messageDiv.style.color = "red";
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            fetch('/add-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: imageData, username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageDiv.textContent = data.message;
+                messageDiv.style.color = data.status === "success" ? "green" : "red";
+                if (data.status === "success") {
+                    setTimeout(() => window.location.href = '/', 1000); // Redirect after success
+                }
+            })
+            .catch(err => {
+                console.error("Error: ", err);
+                messageDiv.textContent = "An error occurred. Please try again.";
+            });
+        });
+
+        // Try Again button functionality
+        goBackBtn.addEventListener('click', () => {
+            window.location.href = '/'
+        });
+
+        logBtn.addEventListener('click', () => {
+            window.location.href = '/download-log';
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            padding: 20px;
+        }
+        video {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            width: 40%;
+            margin: 20px auto;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Face Recognition System</h1>
+        <video id="video" autoplay></video>
+        <!-- <img id="videoFeed" src="/video-feed" alt="Video feed"> -->
+        <br>
+        <button id="loginBtn">Login</button>
+        <button id="logoutBtn">Logout</button>
+        <br>
+        <input type="password" id="password" placeholder="Enter pin to register">
+        <button id="addUserBtn">Add New User</button>
+        <div id="message" class="message"></div>
+    </div>
+    <script>
+        const video = document.getElementById('video');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const passwordInput = document.getElementById('password');
+        const addUserBtn = document.getElementById('addUserBtn');
+        const messageDiv = document.getElementById('message');
+
+        // Access user's webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accessing webcam: ", err);
+                messageDiv.textContent = "Unable to access the webcam.";
+            });
+
+        // Function to capture and send image to the server
+        const captureAndSend = (endpoint) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageDiv.textContent = data.message;
+                messageDiv.style.color = data.status === "success" ? "green" : "red";
+            })
+            .catch(err => {
+                console.error("Error: ", err);
+                messageDiv.textContent = "An error occurred. Please try again.";
+            });
+        };
+
+        // Event listeners for buttons
+        loginBtn.addEventListener('click', () => captureAndSend('/login'));
+        logoutBtn.addEventListener('click', () => captureAndSend('/logout'));
+
+        // Redirect to add-user page
+        addUserBtn.addEventListener('click', () =>{
+            const password = passwordInput.value.trim();
+            if (!password) {
+                messageDiv.textContent = "Enter a Pin.";
+                messageDiv.style.color = "red";
+                return;
+            }
+
+            fetch('/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageDiv.textContent = data.message;
+                messageDiv.style.color = data.status === "success" ? "green" : "red";
+                if (data.status === "success") {
+                    setTimeout(() => window.location.href = '/add-user', 1000); // Redirect after success
+                }
+                if(data.status === "fail"){
+                    passwordInput.value = '';
+                }
+            })
+            .catch(err => {
+                console.error("Error: ", err);
+                messageDiv.textContent = "An error occurred. Please try again.";
+            });
+        });
+
+    </script>
+</body>
+</html>
